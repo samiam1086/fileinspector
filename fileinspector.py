@@ -293,6 +293,21 @@ end_bytes = {'ff d8 ff e0': 'ff d9', #jpg
 
             }
 
+def decode_suspicious_data(after_eof_data):
+    split_data = after_eof_data.split(' ')
+    outstr = ''
+    for hex_byte in split_data:
+        try:
+            outstr += binascii.unhexlify(hex_byte).decode()
+        except UnicodeDecodeError as e:
+            pass
+
+    with open('{}.suspiciousdata'.format(options.file), 'w') as f:
+        f.write(outstr)
+        f.close()
+
+    print('Data after EOF marker was written to {}.suspiciousdata'.format(options.file))
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(add_help=True, description='')
@@ -330,13 +345,16 @@ if __name__ == '__main__':
                 if endmagic == '50 4b 05 06': # This is for docx xlsx pptx files
                     if hex_data.find(endmagic)+len(endmagic)+54 != len(hex_data): # docx xlsx pptx is the endbytes + 18 bytes so 36 chars and 18 spaces = 54 chars total
                         print("WARNING: There is data after the end of file bytes")
+                        decode_suspicious_data(hex_data[hex_data.find(endmagic)+len(endmagic)+54+1:])
 
                 elif endmagic == '4c 61 76 66': # mp4 files
                     if hex_data.find(endmagic)+len(endmagic)+27 != len(hex_data): # mp4 is the endbytes + 9 bytes so 18 chars  and 9 spaces = 27 chars
                         print("WARNING: There is data after the end of file bytes")
+                        decode_suspicious_data(hex_data[hex_data.find(endmagic)+len(endmagic)+27+1:])
 
                 elif hex_data.find(endmagic)+len(endmagic) != len(hex_data):
                     print("WARNING: There is data after the end of file bytes")
+                    decode_suspicious_data(hex_data[hex_data.find(endmagic)+len(endmagic)+1:])
 
                 sys.exit(0)
             except KeyError as e:
